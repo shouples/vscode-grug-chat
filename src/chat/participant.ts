@@ -26,7 +26,8 @@ export async function chatHandler(
   // guard against request being empty
   if (
     request.prompt.trim() === "" &&
-    (request.references.length === 0 || request.command === undefined)
+    request.references.length === 0 &&
+    request.command === undefined
   ) {
     stream.markdown("grug need more than silence");
     return {};
