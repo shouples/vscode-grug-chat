@@ -9,6 +9,7 @@
     "type": "git",
     "url": "https://github.com/shouples/vscode-grug-chat.git"
   },
+  "homepage": "https://grugbrain.dev/",
   "engines": {
     "vscode": "^1.93.0"
   },
