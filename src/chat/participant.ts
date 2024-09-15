@@ -19,7 +19,10 @@ export async function chatHandler(
   const messages: vscode.LanguageModelChatMessage[] = [];
 
   // load initial grug context
-  const promptMarkdownUri = vscode.Uri.joinPath(getExtensionContext().extensionUri, "prompt.md");
+  const promptMarkdownUri = vscode.Uri.joinPath(
+    getExtensionContext().extensionUri,
+    "references/prompt.md",
+  );
   const promptText = await readFile(promptMarkdownUri.fsPath, { encoding: "utf8" });
   messages.push(vscode.LanguageModelChatMessage.User(promptText, "grug"));
 

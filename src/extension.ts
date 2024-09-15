@@ -19,7 +19,7 @@ export function activate(context: vscode.ExtensionContext) {
     chatHandler,
   );
   grug.followupProvider = { provideFollowups };
-  grug.iconPath = vscode.Uri.joinPath(context.extensionUri, "grug.png");
+  grug.iconPath = vscode.Uri.joinPath(context.extensionUri, "resources/grug.png");
   context.subscriptions.push(grug);
 
   logger.info("vscode-grug activated, everything good!");
