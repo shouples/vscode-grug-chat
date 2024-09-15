@@ -23,8 +23,11 @@ export async function chatHandler(
   const promptText = await readFile(promptMarkdownUri.fsPath, { encoding: "utf8" });
   messages.push(vscode.LanguageModelChatMessage.User(promptText, "grug"));
 
-  // guard against prompt being empty
-  if (request.prompt.trim() === "") {
+  // guard against request being empty
+  if (
+    request.prompt.trim() === "" &&
+    (request.references.length === 0 || request.command === undefined)
+  ) {
     stream.markdown("grug need more than silence");
     return {};
   }
