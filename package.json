@@ -20,7 +20,117 @@
         "name": "Grug",
         "description": "A layman's chat participant, helping to think like the self-aware smol brained",
         "isSticky": true,
-        "commands": [],
+        "commands": [
+          {
+            "name": "thoughts",
+            "description": "Get a random thought from Grug Brained Developer based on references to https://grugbrain.dev/"
+          },
+          {
+            "name": "agile",
+            "description": "Discuss Agile with Grug"
+          },
+          {
+            "name": "APIs",
+            "description": "Discuss APIs with Grug"
+          },
+          {
+            "name": "chestertonsFence",
+            "description": "Discuss Chesterton's Fence with Grug"
+          },
+          {
+            "name": "closures",
+            "description": "Discuss Closures with Grug"
+          },
+          {
+            "name": "concurrency",
+            "description": "Discuss Concurrency with Grug"
+          },
+          {
+            "name": "DRY",
+            "description": "Discuss DRY with Grug"
+          },
+          {
+            "name": "eternalEnemyComplexity",
+            "description": "Discuss Complexity with Grug"
+          },
+          {
+            "name": "expressionComplexity",
+            "description": "Discuss Expression Complexity with Grug"
+          },
+          {
+            "name": "factoringYourCode",
+            "description": "Discuss Factoring Your Code with Grug"
+          },
+          {
+            "name": "fads",
+            "description": "Discuss Fads with Grug"
+          },
+          {
+            "name": "fearOfLookingDumb",
+            "description": "Discuss Fear of Looking Dumb with Grug"
+          },
+          {
+            "name": "frontEndDevelopment",
+            "description": "Discuss Front End Development with Grug"
+          },
+          {
+            "name": "imposterSyndrome",
+            "description": "Discuss Imposter Syndrome with Grug"
+          },
+          {
+            "name": "introduction",
+            "description": "Discuss Introduction with Grug"
+          },
+          {
+            "name": "logging",
+            "description": "Discuss Logging with Grug"
+          },
+          {
+            "name": "microservices",
+            "description": "Discuss Microservices with Grug"
+          },
+          {
+            "name": "optimizing",
+            "description": "Discuss Optimizing with Grug"
+          },
+          {
+            "name": "parsing",
+            "description": "Discuss Parsing with Grug"
+          },
+          {
+            "name": "refactoring",
+            "description": "Discuss Refactoring with Grug"
+          },
+          {
+            "name": "sayingNo",
+            "description": "Discuss Saying No with Grug"
+          },
+          {
+            "name": "sayingOk",
+            "description": "Discuss Saying Ok with Grug"
+          },
+          {
+            "name": "separationOfConcerns",
+            "description": "Discuss Separation of Concerns with Grug"
+          },
+          {
+            "name": "testing",
+            "description": "Discuss Testing with Grug"
+          },
+          {
+            "name": "tools",
+            "description": "Discuss Tools with Grug"
+          },
+          {
+            "name": "typeSystems",
+            "description": "Discuss Type Systems with Grug"
+          },
+          {
+            "name": "visitorPattern",
+            "description": "Discuss Visitor Pattern with Grug"
+          }
+
+        ],
         "disambiguation": []
       }
     ],
