@@ -2,7 +2,7 @@ import { readFile } from "fs/promises";
 import * as vscode from "vscode";
 import { getExtensionContext } from "../extensionContext";
 import { Logger } from "../logger";
-import { BLOG_THOUGHT_SECTIONS } from "./constants";
+import { BLOG_THOUGHT_SECTIONS, CHAT_PARTICIPANT_ID } from "./constants";
 import { getGrugReferenceContent, parseReferences } from "./references";
 
 const logger = new Logger("handler");
@@ -23,19 +23,22 @@ export async function chatHandler(
   const promptText = await readFile(promptMarkdownUri.fsPath, { encoding: "utf8" });
   messages.push(vscode.LanguageModelChatMessage.User(promptText, "grug"));
 
+  const userPrompt = request.prompt.trim();
   // guard against request being empty
-  if (
-    request.prompt.trim() === "" &&
-    request.references.length === 0 &&
-    request.command === undefined
-  ) {
+  if (userPrompt === "" && request.references.length === 0 && request.command === undefined) {
     stream.markdown("grug need more than silence");
     return {};
   }
 
-  // TODO: add history to context
+  const historyMessages = filterContextHistory(context.history);
+  messages.push(...historyMessages);
 
-  messages.push(vscode.LanguageModelChatMessage.User(request.prompt, "user"));
+  // add the user's prompt to the messages, if they provided one
+  if (userPrompt) {
+    messages.push(vscode.LanguageModelChatMessage.User(request.prompt, "user"));
+  } else {
+    messages.push(vscode.LanguageModelChatMessage.User("grug give developer advice", "grug"));
+  }
 
   // add any additional references like `#file:<name>`
   if (request.references.length > 0) {
@@ -87,7 +90,13 @@ async function handleCommand(
 
   if (thoughtReference) {
     await handleChatMessage(
-      [...messages, vscode.LanguageModelChatMessage.User(thoughtReference, "grug")],
+      [
+        ...messages,
+        vscode.LanguageModelChatMessage.User(
+          `grug refer back to old thought:\n\n\`\`\`markdown\n${thoughtReference}\n\`\`\``,
+          "grug",
+        ),
+      ],
       stream,
       token,
     );
@@ -134,4 +143,42 @@ async function getModel(): Promise<vscode.LanguageModelChat> {
 
   logger.info(`using language model: ${JSON.stringify(model)}`);
   return model;
+}
+
+/** Filter the chat history to only relevant messages for the current chat with Grug. */
+function filterContextHistory(
+  history: readonly (vscode.ChatRequestTurn | vscode.ChatResponseTurn)[],
+): vscode.LanguageModelChatMessage[] {
+  // only use messages where Grug was tagged, or messages where Grug responded
+  const filteredHistory = history.filter((msg) => msg.participant === CHAT_PARTICIPANT_ID);
+  if (filteredHistory.length === 0) {
+    return [];
+  }
+
+  const messages: vscode.LanguageModelChatMessage[] = [];
+  for (const turn of filteredHistory) {
+    logger.debug("grug add history message", { turn });
+    if (turn instanceof vscode.ChatRequestTurn) {
+      messages.push(
+        vscode.LanguageModelChatMessage.User(
+          `user said:\n\`\`\`markdown\n${turn.prompt}\n\`\`\``,
+          "user",
+        ),
+      );
+      // TODO: add previous commands/references?
+    } else if (turn instanceof vscode.ChatResponseTurn) {
+      if (turn.response instanceof vscode.ChatResponseMarkdownPart) {
+        messages.push(
+          vscode.LanguageModelChatMessage.User(
+            `grug said:\n\`\`\`markdown\n${turn.response.value}\n\`\`\``,
+            "grug",
+          ),
+        );
+      }
+    }
+  }
+
+  // TODO: implement a user-configurable limit on the number of history messages to show
+
+  return messages;
 }

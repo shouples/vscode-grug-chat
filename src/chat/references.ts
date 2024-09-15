@@ -46,7 +46,10 @@ async function handleReference(
       const fileUri = vscode.Uri.from(reference.value as vscode.Uri);
       const fileContent = await readFile(fileUri.fsPath, "utf8");
       const fileName = fileUri.path.split("/").pop();
-      return vscode.LanguageModelChatMessage.User(`${fileName}:\n\n${fileContent}`, "user");
+      return vscode.LanguageModelChatMessage.User(
+        `${fileName}:\n\n\`\`\`\n${fileContent}\n\`\`\``,
+        "user",
+      );
     case "copilot.selection":
       return vscode.LanguageModelChatMessage.User(`${reference.value}`, "user");
     // TODO: handle other reference types
