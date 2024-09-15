@@ -10,7 +10,7 @@ export function provideFollowups(
 ): vscode.ProviderResult<vscode.ChatFollowup[]> {
   logger.debug("grug receive followup request", { result, context });
 
-  // TODO: implement this based on `metadata` from the result above
+  // TODO: implement this based on `metadata` from the result of `chatHandler()`
 
   return [];
 }
