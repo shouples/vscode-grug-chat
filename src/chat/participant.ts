@@ -54,7 +54,7 @@ export async function chatHandler(
   stream.progress("grug think");
   try {
     if (request.command) {
-      await handleCommand(request.command, messages, stream, token);
+      await handleChatCommand(request.command, messages, stream, token);
       return { metadata: { command: request.command } };
     } else {
       await handleChatMessage(messages, stream, token);
@@ -71,8 +71,8 @@ export async function chatHandler(
   }
 }
 
-/** Handle a command from the user. */
-async function handleCommand(
+/** Handle a slash command from the user. */
+async function handleChatCommand(
   command: string,
   messages: vscode.LanguageModelChatMessage[],
   stream: vscode.ChatResponseStream,
