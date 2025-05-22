@@ -52,9 +52,34 @@ export async function chatHandler(
   }
 
   stream.progress("grug think");
+
+  // Prepare model and tool definitions outside the try/catch and handleChatMessage
+  let model: vscode.LanguageModelChat;
+  let grugToolDefinitions: vscode.LanguageModelChatTool[];
+
   try {
-    // Old command handling removed, tools will be invoked by the LM system
-    await handleChatMessage(messages, stream, token);
+    model = await getModel();
+
+    const allRegisteredTools: readonly vscode.LanguageModelToolInformation[] = vscode.lm.tools;
+    logger.debug(`Found ${allRegisteredTools.length} registered tools total.`);
+    const grugToolNames = ['grug_get_random_thought', 'grug_get_specific_thought'];
+    const relevantRegisteredTools = allRegisteredTools.filter(tool => grugToolNames.includes(tool.name));
+    logger.debug(`Found ${relevantRegisteredTools.length} relevant Grug tools.`);
+
+    grugToolDefinitions = relevantRegisteredTools.map(toolInfo => ({
+      name: toolInfo.name,
+      description: toolInfo.description || `Grug's tool: ${toolInfo.name}`,
+      inputSchema: toolInfo.inputSchema
+    }));
+
+    if (grugToolDefinitions.length > 0) {
+      logger.debug("Passing the following Grug tools to the model:", grugToolDefinitions.map(t => t.name));
+    } else {
+      logger.warn("No Grug tools found to pass to the model. Check registration and names.");
+    }
+
+    // Call the refactored handleChatMessage
+    await handleChatMessage(request, messages, stream, token, model, grugToolDefinitions);
     return {};
   } catch (error) {
     stream.progress("grug tempted to reach for club, but grug stay calm");
@@ -69,27 +94,114 @@ export async function chatHandler(
 
 // Removed handleChatCommand function
 
-/** Handle a chat message from the user. */
+/** Handle a chat message from the user, managing iterative tool calls and responses. */
 async function handleChatMessage(
-  messages: vscode.LanguageModelChatMessage[],
+  request: vscode.ChatRequest, // Added request for toolInvocationToken
+  initialMessages: vscode.LanguageModelChatMessage[],
   stream: vscode.ChatResponseStream,
   token: vscode.CancellationToken,
+  model: vscode.LanguageModelChat, // Pass model in
+  grugToolDefinitions: vscode.LanguageModelChatTool[] // Pass definitions in
 ): Promise<void> {
-  logger.debug("grug handle chat message", { messages });
-  const model: vscode.LanguageModelChat = await getModel();
-  const chatResponse: vscode.LanguageModelChatResponse = await model.sendRequest(
-    messages,
-    {},
-    token,
-  );
-  logger.debug("grug make chat response", { chatResponse });
-  for await (const fragment of chatResponse.text) {
+  logger.debug("Grug starting iterative chat message handling", { initialMessagesCount: initialMessages.length });
+
+  const messagesForNextRequest = [...initialMessages];
+
+  while (true) {
     if (token.isCancellationRequested) {
-      logger.debug("grug chat request cancelled");
+      logger.debug("Grug chat cancelled before new LLM request.");
+      stream.markdown("Grug stop thinking, request cancelled.");
       return;
     }
-    stream.markdown(fragment);
+
+    logger.debug(`Sending ${messagesForNextRequest.length} messages to LLM for next turn.`);
+    const chatResponse = await model.sendRequest(
+      messagesForNextRequest,
+      { tools: grugToolDefinitions },
+      token,
+    );
+
+    let hasMadeToolCallInThisIteration = false;
+    const assistantResponseMessageParts: Array<vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart> = [];
+    const toolResultsForNextTurn: vscode.LanguageModelToolResultPart[] = [];
+    let currentTextChunk = "";
+
+    for await (const chunk of chatResponse.text) {
+      if (token.isCancellationRequested) {
+        logger.debug("Grug chat request cancelled during response processing");
+        stream.markdown("\n\nGrug stop, request cancelled while Grug talk.");
+        // Do not add partial assistant message to history if cancelled mid-stream
+        return;
+      }
+
+      if (typeof chunk === 'string') {
+        stream.markdown(chunk);
+        currentTextChunk += chunk;
+      } else if (chunk instanceof vscode.LanguageModelToolCallPart) {
+        if (currentTextChunk) {
+          assistantResponseMessageParts.push(new vscode.LanguageModelTextPart(currentTextChunk));
+          currentTextChunk = "";
+        }
+        assistantResponseMessageParts.push(chunk);
+        hasMadeToolCallInThisIteration = true;
+
+        logger.info(`LLM requests tool call: ${chunk.name}`, chunk.parameters);
+        stream.progress(`Grug use tool: ${chunk.name}...`);
+
+        try {
+          const toolResult = await vscode.lm.invokeTool(
+            chunk.name,
+            { input: chunk.parameters, toolInvocationToken: request.toolInvocationToken },
+            token
+          );
+          
+          // Assuming toolResult.content is already Array<LanguageModelTextPart | LanguageModelPromptPart>
+          // which aligns with LanguageModelToolResult.content type.
+          toolResultsForNextTurn.push(new vscode.LanguageModelToolResultPart(chunk.callId, toolResult.content));
+          logger.info(`Tool ${chunk.name} executed successfully.`);
+          stream.progress(`Tool ${chunk.name} finished.`);
+        } catch (toolError: any) {
+          logger.error(`Error invoking tool ${chunk.name}:`, toolError);
+          const errorMessage = toolError.message || 'Unknown error during tool execution';
+          stream.markdown(`\n\nGrug error using tool ${chunk.name}: ${errorMessage}\n\n`);
+          
+          const errorResultContent: Array<vscode.LanguageModelTextPart | vscode.LanguageModelToolCallPart> = [new vscode.LanguageModelTextPart(`Error executing tool ${chunk.name}: ${errorMessage}`)];
+          toolResultsForNextTurn.push(new vscode.LanguageModelToolResultPart(chunk.callId, errorResultContent));
+        }
+      }
+    }
+
+    // After iterating all chunks from chatResponse.text:
+    if (currentTextChunk) { // Add any trailing text from assistant
+      assistantResponseMessageParts.push(new vscode.LanguageModelTextPart(currentTextChunk));
+    }
+
+    // Add the assistant's complete message (text and/or tool calls) to history for the next LLM turn
+    if (assistantResponseMessageParts.length > 0) {
+      messagesForNextRequest.push(new vscode.LanguageModelChatMessage(
+        vscode.LanguageModelChatMessageRole.Assistant,
+        assistantResponseMessageParts
+      ));
+      logger.debug("Added Assistant message to history for next turn.", { partCount: assistantResponseMessageParts.length });
+    }
+
+    // If tool calls were made and their results processed, add these results to history
+    if (toolResultsForNextTurn.length > 0) {
+      messagesForNextRequest.push(new vscode.LanguageModelChatMessage(
+        vscode.LanguageModelChatMessageRole.User, // Per API, tool results are User role
+        toolResultsForNextTurn
+      ));
+      logger.debug("Added Tool results to history for next turn.", { resultCount: toolResultsForNextTurn.length });
+    }
+    
+    // If no tool calls were made in this iteration, the conversation turn is complete.
+    if (!hasMadeToolCallInThisIteration) {
+      logger.debug("No tool calls in this iteration, ending Grug's turn.");
+      break; 
+    }
+    logger.debug("Tool calls made, continuing interaction loop.");
   }
+  logger.debug("Grug finished handling chat message.");
 }
 
 /** Get the language model to use for the chat; adjusted by user settings. */
@@ -133,12 +245,21 @@ function filterContextHistory(
       );
       // TODO: add previous commands/references?
     } else if (turn instanceof vscode.ChatResponseTurn) {
-      if (turn.response instanceof vscode.ChatResponseMarkdownPart) {
+      // Grug's previous responses should be Assistant role
+      let grugSaidContent = "";
+      for (const part of turn.response) { // turn.response is readonly ChatResponsePart[]
+        if (part instanceof vscode.ChatResponseMarkdownPart) {
+          grugSaidContent += part.value;
+        }
+        // Potentially handle other ChatResponsePart types if they become relevant for history
+      }
+      if (grugSaidContent.trim() !== "") {
         messages.push(
-          vscode.LanguageModelChatMessage.User(
-            `grug said:\n\`\`\`markdown\n${turn.response.value}\n\`\`\``,
-            "grug",
-          ),
+          new vscode.LanguageModelChatMessage(
+            vscode.LanguageModelChatMessageRole.Assistant,
+            grugSaidContent, // Use the raw accumulated markdown content
+            "grug" // Optional name
+          )
         );
       }
     }
