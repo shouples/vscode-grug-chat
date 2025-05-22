@@ -13,3 +13,14 @@ suite('Extension Test Suite', () => {
 		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
 	});
 });
+
+suite('Sinon Test Suite', () => {
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+	const sinon = require('sinon');
+	test('Should call console.log', () => {
+		const spy = sinon.spy(console, 'log');
+		console.log('Hello Sinon!');
+		assert.ok(spy.called);
+		spy.restore();
+	});
+});
