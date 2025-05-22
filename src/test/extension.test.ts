@@ -5,22 +5,22 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 // import * as myExtension from '../../extension';
 
-suite('Extension Test Suite', () => {
+describe('Extension Test Suite', () => {
 	vscode.window.showInformationMessage('Start all tests.');
 
-	test('Sample test', () => {
+	it('Sample test', () => {
 		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
 		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
 	});
 });
 
-suite('Sinon Test Suite', () => {
+describe('Sinon Test Suite', () => {
 	// eslint-disable-next-line @typescript-eslint/no-var-requires
 	const sinon = require('sinon');
-	test('Should call vscode.window.showInformationMessage', () => {
+	it('Should call vscode.window.showInformationMessage', () => {
 		const spy = sinon.spy(vscode.window, 'showInformationMessage');
 		vscode.window.showInformationMessage('Test message');
-		assert(spy.calledOnce);
+		assert.ok(spy.calledOnce, "vscode.window.showInformationMessage should have been called once");
 		spy.restore();
 	});
 });
