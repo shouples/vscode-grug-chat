@@ -2,8 +2,8 @@ import { readFile } from "fs/promises";
 import * as vscode from "vscode";
 import { getExtensionContext } from "../extensionContext";
 import { Logger } from "../logger";
-import { BLOG_THOUGHT_SECTIONS, CHAT_PARTICIPANT_ID } from "./constants";
-import { getGrugReferenceContent, parseReferences } from "./references";
+import { CHAT_PARTICIPANT_ID } from "./constants"; // Removed BLOG_THOUGHT_SECTIONS
+import { parseReferences } from "./references"; // Removed getGrugReferenceContent
 
 const logger = new Logger("handler");
 
@@ -53,13 +53,9 @@ export async function chatHandler(
 
   stream.progress("grug think");
   try {
-    if (request.command) {
-      await handleChatCommand(request.command, messages, stream, token);
-      return { metadata: { command: request.command } };
-    } else {
-      await handleChatMessage(messages, stream, token);
-      return {};
-    }
+    // Old command handling removed, tools will be invoked by the LM system
+    await handleChatMessage(messages, stream, token);
+    return {};
   } catch (error) {
     stream.progress("grug tempted to reach for club, but grug stay calm");
     logger.error("error getting response from language model: ", error);
@@ -71,40 +67,7 @@ export async function chatHandler(
   }
 }
 
-/** Handle a slash command from the user. */
-async function handleChatCommand(
-  command: string,
-  messages: vscode.LanguageModelChatMessage[],
-  stream: vscode.ChatResponseStream,
-  token: vscode.CancellationToken,
-): Promise<void> {
-  logger.debug("grug handle command", { command });
-
-  let thoughtReference: string | null = null;
-  if (command === "thoughts") {
-    // pick a random file from references/*.md
-    thoughtReference = await getGrugReferenceContent();
-  } else if (BLOG_THOUGHT_SECTIONS.includes(`${command}.md`)) {
-    stream.progress(`grug think about ${command}...`);
-    thoughtReference = await getGrugReferenceContent(`${command}.md`);
-  } else {
-    stream.markdown("grug not know how to do that yet.");
-  }
-
-  if (thoughtReference) {
-    await handleChatMessage(
-      [
-        ...messages,
-        vscode.LanguageModelChatMessage.User(
-          `grug refer back to old thought:\n\n\`\`\`markdown\n${thoughtReference}\n\`\`\``,
-          "grug",
-        ),
-      ],
-      stream,
-      token,
-    );
-  }
-}
+// Removed handleChatCommand function
 
 /** Handle a chat message from the user. */
 async function handleChatMessage(

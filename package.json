@@ -154,7 +154,70 @@
           "description": "The language model to use for the Grug Copilot chat participant."
         }
       }
-    }
+    },
+    "languageModelTools": [
+      {
+        "name": "grug_get_random_thought",
+        "displayName": "Get Random Grug Thought",
+        "modelDescription": "Retrieves a random thought or piece of wisdom from Grug's collection of markdown files in the 'references/' directory, excluding 'prompt.md'.",
+        "userDescription": "Retrieves a random Grug thought.",
+        "toolReferenceName": "randomGrugThought",
+        "icon": "$(lightbulb)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {}
+        }
+      },
+      {
+        "name": "grug_get_specific_thought",
+        "displayName": "Get Specific Grug Thought",
+        "modelDescription": "Retrieves Grug's thoughts on a specific topic. The topic must be one of the available markdown files in the 'references/' directory, excluding 'prompt.md'.",
+        "userDescription": "Retrieves Grug's thoughts on a specific topic.",
+        "toolReferenceName": "grugThought",
+        "icon": "$(lightbulb-autofix)",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string",
+              "description": "The topic to retrieve thoughts on. This should correspond to one of the Grug's reference markdown files (e.g., 'APIs', 'DRY', 'testing').",
+              "enum": [
+                "APIs",
+                "DRY",
+                "agile",
+                "chestertonsFence",
+                "closures",
+                "conclusion",
+                "concurrency",
+                "eternalEnemyComplexity",
+                "expressionComplexity",
+                "factoringYourCode",
+                "fads",
+                "fearOfLookingDumb",
+                "frontEndDevelopment",
+                "imposterSyndrome",
+                "introduction",
+                "logging",
+                "microservices",
+                "optimizing",
+                "parsing",
+                "refactoring",
+                "sayingNo",
+                "sayingOk",
+                "separationOfConcerns",
+                "testing",
+                "tools",
+                "typeSystems",
+                "visitorPattern"
+              ]
+            }
+          },
+          "required": [
+            "topic"
+          ]
+        }
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
